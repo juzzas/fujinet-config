@@ -75,6 +75,16 @@ void screen_clearxy(char x, char y, int len)
     cputc(' ');
 }
 
+void screen_clear_status(void)
+{
+  screen_gotoxy(0,STATUS_BAR);
+  cprintf("%c[2K", 27);
+  screen_gotoxy(0,STATUS_BAR+1);
+  cprintf("%c[2K", 27);
+  screen_gotoxy(0,STATUS_BAR+2);
+  cprintf("%c[2K", 27);
+}
+
 void chlinexy(char x, char y, int len)
 {
   screen_gotoxy(x,y);
@@ -89,7 +99,7 @@ void screen_debug(char *message)
 
 void screen_error(const char *c)
 {
-  screen_clearxy(0,STATUS_BAR,120);
+  screen_clear_status();
   screen_gotoxy(0,STATUS_BAR + 1); cprintf("%-40s",c);
   screen_inverse_line(STATUS_BAR + 1);
 }
@@ -144,7 +154,7 @@ void screen_set_wifi_display_ssid(char n, SSIDInfo *s)
 
 void screen_set_wifi_select_network(unsigned char nn)
 {
-  screen_clearxy(0,STATUS_BAR,120);
+  screen_clear_status();
   bar_set(4,1,nn,0);
   screen_gotoxy(10,STATUS_BAR); cprintf("FOUND %d NETWORKS.\r\n", nn);
   screen_gotoxy(0, STATUS_BAR + 1);
@@ -157,7 +167,7 @@ void screen_set_wifi_select_network(unsigned char nn)
 
 void screen_set_wifi_custom(void)
 {
-  screen_clearxy(0,STATUS_BAR,120);
+  screen_clear_status();
   screen_gotoxy(0,STATUS_BAR); cprintf("ENTER NAME OF HIDDDEN NETWORK");
 }
 
@@ -166,7 +176,7 @@ void screen_set_wifi_password(void)
 //  char ostype;
 //  ostype = get_ostype() & 0xF0;
 
-  screen_clearxy(0, STATUS_BAR, 120);
+  screen_clear_status();
   screen_gotoxy(0,STATUS_BAR); cprintf("ENTER NET PASSWORD AND PRESS [RETURN]");
 //  if (ostype == APPLE_II)
 //  {
@@ -177,7 +187,7 @@ void screen_set_wifi_password(void)
 
 void screen_connect_wifi(NetConfig *nc)
 {
-  screen_clearxy(0,STATUS_BAR,120);
+  screen_clear_status();
   screen_gotoxy(0,STATUS_BAR); cprintf("CONNECTING TO NETWORK: %s",nc->ssid);
 }
 
@@ -196,7 +206,7 @@ void screen_destination_host_slot_choose(void)
   cprintf("COPY TO HOST SLOT");
   chlinexy(0,1,40);
 
-  screen_clearxy(0,STATUS_BAR,120);
+  screen_clear_status();
   screen_gotoxy(0,STATUS_BAR);
   screen_print_menu("1-8",":CHOOSE SLOT\r\n");
   screen_print_menu("RETURN",":SELECT SLOT\r\n");
@@ -254,7 +264,7 @@ void screen_hosts_and_devices(HostSlot *h, DeviceSlot *d, bool *e)
 void screen_hosts_and_devices_hosts(void)
 {
   bar_set(1,1,8,0);
-  screen_clearxy(0,STATUS_BAR,120);
+  screen_clear_status();
   // screen_gotoxy(0,STATUS_BAR); cprintf("[C]ONFIG  [E]DIT SLOT  [ESC]BOOT\r\n[1-8]HOST SLOT  [RETURN]SELECT SLOT\r\n[TAB] DEVICE SLOTS");
   screen_gotoxy(0,STATUS_BAR);
   screen_print_menu("1-8", ":SLOT  ");
@@ -279,7 +289,7 @@ void screen_hosts_and_devices_host_slots(HostSlot *h)
 void screen_hosts_and_devices_devices(void)
 {
   bar_set(11,1,4,0);
-  screen_clearxy(0,STATUS_BAR,120);
+  screen_clear_status();
   screen_gotoxy(0,STATUS_BAR);
   screen_print_menu("E","JECT  ");
   screen_print_menu("R","EAD ONLY  ");
@@ -294,7 +304,7 @@ void screen_hosts_and_devices_clear_host_slot(unsigned char i)
 
 void screen_hosts_and_devices_edit_host_slot(unsigned char i)
 {
-  screen_clearxy(0,STATUS_BAR,120);
+  screen_clear_status();
   screen_gotoxy(0,STATUS_BAR); cprintf("EDIT THE HOST NAME FOR SLOT %d\r\nPRESS [RETURN] WHEN DONE.",i);
 }
 
@@ -333,7 +343,7 @@ void screen_show_info(bool printerEnabled, AdapterConfig* ac)
 
 void screen_select_file(void)
 {
-  screen_clearxy(0,STATUS_BAR,120);
+  screen_clear_status();
   screen_gotoxy(0,STATUS_BAR); cprintf("OPENING...");
 }
 
@@ -397,7 +407,7 @@ void screen_select_file_new_custom(void)
 void screen_select_file_choose(char visibleEntries)
 {
   bar_set(3,2,visibleEntries,0); // TODO: Handle previous
-  screen_clearxy(0,STATUS_BAR,120);
+  screen_clear_status();
   screen_gotoxy(0,STATUS_BAR);
   screen_print_menu("RETURN",":SELECT FILE TO MOUNT\r\n");
   screen_print_menu("ESC",":PARENT  ");
@@ -407,7 +417,7 @@ void screen_select_file_choose(char visibleEntries)
 
 void screen_select_file_filter(void)
 {
-  screen_clearxy(0,STATUS_BAR,120);
+  screen_clear_status();
   screen_gotoxy(0,STATUS_BAR); cprintf("ENTER A WILDCARD FILTER.\r\n E.G. *Apple*");
 }
 
@@ -434,7 +444,7 @@ void screen_select_slot(char *e)
 
 void screen_select_slot_choose(void)
 {
-  screen_clearxy(0,STATUS_BAR,120);
+  screen_clear_status();
   screen_gotoxy(3,STATUS_BAR);
   screen_print_menu("1-4"," SELECT SLOT OR USE ARROW KEYS\r\n ");
   screen_print_menu("RETURN/R",":INSERT READ ONLY\r\n ");
@@ -464,7 +474,7 @@ void screen_select_file_new_creating(void)
 
 void screen_select_slot_mode(void)
 {
-  screen_clearxy(0,STATUS_BAR,120);
+  screen_clear_status();
   screen_gotoxy(1,STATUS_BAR);
   screen_print_menu("R","EAD ONLY  ");
   screen_print_menu("W",": READ/WRITE");
