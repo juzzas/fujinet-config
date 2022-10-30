@@ -236,7 +236,7 @@ void screen_hosts_and_devices_device_slots(unsigned char y, DeviceSlot *d, bool 
 
   for (i=0;i<4;i++)
     {
-      screen_gotoxy(0,i+y); cprintf("%d %s",i+1,screen_hosts_and_devices_device_slot(d[i].hostSlot,e[i],d[i].file));
+      screen_gotoxy(2,i+y); cprintf("%d %s",i+1,screen_hosts_and_devices_device_slot(d[i].hostSlot,e[i],d[i].file));
     }
 }
 
@@ -254,9 +254,9 @@ void screen_hosts_and_devices(HostSlot *h, DeviceSlot *d, bool *e)
   chlinexy(0,10,40 - sizeof(ds));
 
   for (i=0;i<8;i++)
-    {
-      screen_gotoxy(0,i+1); cprintf("%d %s",i+1,screen_hosts_and_devices_slot(h[i]));
-    }
+  {
+    screen_gotoxy(2,i+1); cprintf("%d %s",i+1,screen_hosts_and_devices_slot(h[i]));
+  }
 
   screen_hosts_and_devices_device_slots(11,d,e);
 }

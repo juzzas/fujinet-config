@@ -483,7 +483,7 @@ WSSubState input_set_wifi_select(void)
 void input_line_hosts_and_devices_host_slot(unsigned char i, unsigned char o, char *c)
 {
   bar_clear(false);
-  input_line(2,i+1,o,c,32,false);
+  input_line(4,i+1,o,c,32,false);
 }
 
 void input_line_filter(char *c)
