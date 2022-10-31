@@ -299,7 +299,7 @@ void screen_hosts_and_devices_devices(void)
 
 void screen_hosts_and_devices_clear_host_slot(unsigned char i)
 {
-  screen_clearxy(1,i+1,39);
+  screen_clearxy(3,i+1,39);
 }
 
 void screen_hosts_and_devices_edit_host_slot(unsigned char i)
@@ -482,21 +482,21 @@ void screen_select_slot_mode(void)
 
 void screen_select_slot_eject(unsigned char ds)
 {
-  screen_clearxy(1,1+ds,39);
-  screen_gotoxy(2,1+ds); cprintf("Empty");
+  screen_clearxy(3,1+ds,39);
+  screen_gotoxy(4,1+ds); cprintf("EMPTY");
   bar_jump(bar_get());
 }
 
 void screen_hosts_and_devices_eject(unsigned char ds)
 {
-  screen_clearxy(1,13+ds,39);
-  screen_gotoxy(2,13+ds); cprintf("Empty");
+  screen_clearxy(3,13+ds,39);
+  screen_gotoxy(4,13+ds); cprintf("EMPTY");
   bar_jump(bar_get());
 }
 
 void screen_hosts_and_devices_host_slot_empty(unsigned char hs)
 {
-  screen_gotoxy(2,2+hs); cprintf("Empty");
+  screen_gotoxy(4,2+hs); cprintf("EMPTY");
 }
 
 #endif /* BUILD_RC2014 */
