@@ -14,6 +14,8 @@
 
 #define FUJI_DEV 0x0F
 #define MOCK_WIFI
+#define MOCK_DEVICES
+#define MOCK_HOSTS
 
 static uint8_t response[1024];
 static FUJINET_RC last_rc = FUJINET_RC_OK;
@@ -44,9 +46,33 @@ int mock_ssid_num = 3;
 NetConfig mock_netconfig = {
         "my-test-wifi", "password"
 };
-
 #endif
 
+#ifdef MOCK_DEVICES
+DeviceSlot mock_devices[8] = {
+        { 0, 1, "TEST.DSK" },
+        { 1, 0, {} },
+        { 2, 0, {} },
+        { 3, 0, {} },
+        { 4, 0, {} },
+        { 5, 0, {} },
+        { 6, 0, {} },
+        { 7, 0, {} }
+};
+#endif
+
+#ifdef MOCK_HOSTS
+HostSlot mock_hosts[8] = {
+        { "rc2014-apps.irata.online" },
+        { {} },
+        { {} },
+        { {} },
+        { {} },
+        { {} },
+        { {} },
+        { {} }
+};
+#endif
 
 
 void io_init(void)
@@ -75,9 +101,10 @@ unsigned char io_get_wifi_status(void)
 
   sleep(1);
 #ifdef MOCK_WIFI
+  last_rc = FUJINET_RC_OK;
   return 0;
 #else
-  fujinet_dcb_exec(&dcb);
+  last_rc = fujinet_dcb_exec(&dcb);
 
   return response[0];
 #endif
@@ -94,9 +121,10 @@ NetConfig* io_get_ssid(void)
 
 
 #ifdef MOCK_WIFI
+  last_rc = FUJINET_RC_OK;
   return mock_netconfig;
 #else
-  fujinet_dcb_exec(&dcb);
+  last_rc = fujinet_dcb_exec(&dcb);
 
   return (NetConfig *)response;
 #endif
@@ -113,9 +141,10 @@ unsigned char io_scan_for_networks(void)
 
 
 #ifdef MOCK_WIFI
+  last_rc = FUJINET_RC_OK;
   return mock_ssid_num;
 #else
-  fujinet_dcb_exec(&dcb);
+  last_rc = fujinet_dcb_exec(&dcb);
 
   return response[0];
 #endif
@@ -132,9 +161,10 @@ SSIDInfo *io_get_scan_result(unsigned char n)
   dcb.aux1 = n;
 
 #ifdef MOCK_WIFI
+  last_rc = FUJINET_RC_OK;
   return &mock_ssid[n];
 #else
-  fujinet_dcb_exec(&dcb);
+  last_rc = fujinet_dcb_exec(&dcb);
 
   return (SSIDInfo *)response;
 #endif
@@ -149,11 +179,11 @@ AdapterConfig *io_get_adapter_config(void)
   dcb.response_bytes = sizeof(AdapterConfig);
   dcb.timeout = 15;
 
-
 #ifdef MOCK_WIFI
+  last_rc = FUJINET_RC_OK;
   return mock_cfg;
 #else
-  fujinet_dcb_exec(&dcb);
+  last_rc = fujinet_dcb_exec(&dcb);
 
   return (AdapterConfig *)response;
 #endif
@@ -161,126 +191,224 @@ AdapterConfig *io_get_adapter_config(void)
 
 void io_set_ssid(NetConfig *nc)
 {
-  unsigned char c[98]={0xFB};
+  struct fujinet_dcb dcb = {};
 
-  memcpy(&c[1],nc,sizeof(NetConfig));
+  dcb.command = 0xFB;
+  dcb.buffer = (uint8_t *)nc;
+  dcb.buffer_bytes = sizeof(NetConfig);
+  dcb.timeout = 15;
 
-//  eos_write_character_device(FUJI_DEV,&c,sizeof(c));
-
+#ifdef MOCK_WIFI
+  memcpy(&mock_cfg, nc, sizeof(NetConfig));
+  last_rc = FUJINET_RC_OK;
+#else
+  last_rc = fujinet_dcb_exec(&dcb);
+#endif
 }
 
 void io_get_device_slots(DeviceSlot *d)
 {
-  unsigned char c=0xF2;
+  struct fujinet_dcb dcb = {};
 
-//  io_command_and_response(&c,1);
+  dcb.command = 0xF2;
+  dcb.response = (uint8_t *)d;
+  dcb.response_bytes = sizeof(DeviceSlot) * 8;
+  dcb.timeout = 15;
 
-  memcpy(d,response,304);
+#ifdef MOCK_DEVICES
+  memcpy(d,mock_devices,sizeof(DeviceSlot) * 8);
+  last_rc = FUJINET_RC_OK;
+#else
+  last_rc = fujinet_dcb_exec(&dcb);
+#endif
 }
 
 void io_get_host_slots(HostSlot *h)
 {
-  unsigned char c=0xF4;
+  struct fujinet_dcb dcb = {};
 
-//  io_command_and_response(&c,1);
-  
-  memcpy(h,response,256);
+  dcb.command = 0xF4;
+  dcb.response = (uint8_t *)h;
+  dcb.response_bytes = sizeof(HostSlot) * 8;
+  dcb.timeout = 15;
+
+#ifdef MOCK_DEVICES
+  memcpy(h,mock_hosts,sizeof(HostSlot) * 8);
+  last_rc = FUJINET_RC_OK;
+#else
+  last_rc = fujinet_dcb_exec(&dcb);
+#endif
+
 }
 
 void io_put_host_slots(HostSlot *h)
 {
-  unsigned char c[257]={0xF3};
+  struct fujinet_dcb dcb = {};
 
-  memcpy(&c[1],h,256);
+  dcb.command = 0xF3;
+  dcb.buffer = (uint8_t *)h;
+  dcb.buffer_bytes = sizeof(HostSlot) * 8;
+  dcb.timeout = 15;
 
-//  eos_write_character_device(FUJI_DEV,&c,sizeof(c));
+#ifdef MOCK_DEVICES
+  memcpy(mock_hosts, h, sizeof(HostSlot) * 8);
+  last_rc = FUJINET_RC_OK;
+#else
+  last_rc = fujinet_dcb_exec(&dcb);
+#endif
 }
 
 void io_put_device_slots(DeviceSlot *d)
 {
-  unsigned char c[305]={0xF1};
+  struct fujinet_dcb dcb = {};
 
-  memcpy(&c[1],d,304);
+  dcb.command = 0xF1;
+  dcb.buffer = (uint8_t *)d;
+  dcb.buffer_bytes = sizeof(DeviceSlot) * 8;
+  dcb.timeout = 15;
 
-//  eos_write_character_device(FUJI_DEV,&c,sizeof(c));
+#ifdef MOCK_DEVICES
+  memcpy(mock_hosts, d, sizeof(DeviceSlot) * 8);
+  last_rc = FUJINET_RC_OK;
+#else
+  last_rc = fujinet_dcb_exec(&dcb);
+#endif
+
   csleep(10);
 }
 
 void io_mount_host_slot(unsigned char hs)
 {
-//  unsigned char c[2]={0xF9,0x00};
-//
-//  c[1] = hs;
-//
-//  eos_write_character_device(FUJI_DEV,&c,sizeof(c));
+  struct fujinet_dcb dcb = {};
+
+  dcb.command = 0xF9;
+  dcb.timeout = 15;
+  dcb.aux1 = hs;
+
+#ifdef MOCK_DEVICES
+  /* do nothing */
+  last_rc = FUJINET_RC_OK;
+#else
+  last_rc = fujinet_dcb_exec(&dcb);
+#endif
 }
 
 void io_open_directory(unsigned char hs, char *p, char *f)
 {
-//  char c[258];
-//  char *e;
-//
-//  memset(&c,0,258);
-//  c[0]=0xF7;
-//  c[1]=hs;
-//  strcpy(&c[2],p);
-//  e=&c[2];
-//
-//  if (f[0]!=0x00)
-//    {
-//      while (*e != 0x00)
-//	e++;
-//
-//      e++;
-//      strcpy(e,f);
-//    }
-//
-//  eos_write_character_device(FUJI_DEV,&c,sizeof(c));
+  struct fujinet_dcb dcb = {};
+  char c[258];
+  char *e;
+
+  memset(&c,0,258);
+
+  strcpy(c, p);
+  e = c;
+
+  if (f[0]!=0x00) {
+    while (*e != 0x00)
+      e++;
+
+    e++;
+    strcpy(e,f);
+  }
+
+  dcb.command = 0xF1;
+  dcb.buffer = (uint8_t *)c;
+  dcb.buffer_bytes = 256;
+  dcb.timeout = 15;
+  dcb.aux1 = hs;
+
+#ifdef MOCK_DEVICES
+  /* do nothing */
+  last_rc = FUJINET_RC_OK;
+#else
+  last_rc = fujinet_dcb_exec(&dcb);
+#endif
 }
 
 char *io_read_directory(unsigned char l, unsigned char a)
 {
-  unsigned char c[3]={0xF6,0x00,0x00};
-  c[1]=l;
-  c[2]=a;
-  //io_command_and_response(&c,3);
-  return response;
+  struct fujinet_dcb dcb = {};
+
+  dcb.command = 0xF6;
+  dcb.timeout = 15;
+  dcb.aux1 = l;
+  dcb.aux2 = a;
+
+#ifdef MOCK_DEVICES
+  /* do nothing */
+  last_rc = FUJINET_RC_OK;
+#else
+  last_rc = fujinet_dcb_exec(&dcb);
+#endif
 }
 
 void io_close_directory(void)
 {
-  unsigned char c=0xF5;
+  struct fujinet_dcb dcb = {};
 
-//  eos_write_character_device(FUJI_DEV,&c,sizeof(c));
+  dcb.command = 0xF5;
+  dcb.timeout = 15;
+
+#ifdef MOCK_DEVICES
+  /* do nothing */
+  last_rc = FUJINET_RC_OK;
+#else
+  last_rc = fujinet_dcb_exec(&dcb);
+#endif
 }
 
 void io_set_directory_position(DirectoryPosition pos)
 {
-  unsigned char c[3]={0xE4,0x00,0x00};
+  struct fujinet_dcb dcb = {};
 
-  memcpy(&c[1],&pos,sizeof(DirectoryPosition));
+  dcb.command = 0xE4;
+  dcb.timeout = 15;
+  dcb.aux1 = pos & 0xff;
+  dcb.aux2 = (pos >> 8) & 0xff;
 
-//  eos_write_character_device(FUJI_DEV,&c,sizeof(c));
+#ifdef MOCK_DEVICES
+  /* do nothing */
+  last_rc = FUJINET_RC_OK;
+#else
+  last_rc = fujinet_dcb_exec(&dcb);
+#endif
 }
 
 void io_set_device_filename(unsigned char ds, char* e)
 {
-  char c[258]={0xE2,0x00};
-  
-  c[1] = ds;
+  struct fujinet_dcb dcb = {};
 
-  strcpy(&c[2],e);
+  dcb.command = 0xE4;
+  dcb.timeout = 15;
+  dcb.buffer = e;
+  dcb.buffer_bytes = 256;
+  dcb.aux1 = ds;
 
-//  eos_write_character_device(FUJI_DEV,&c,sizeof(c));
+#ifdef MOCK_DEVICES
+  /* do nothing */
+  last_rc = FUJINET_RC_OK;
+#else
+  last_rc = fujinet_dcb_exec(&dcb);
+#endif
 }
 
 char *io_get_device_filename(unsigned char ds)
 {
-  char c[2]={0xDA,0x00};
+  struct fujinet_dcb dcb = {};
 
-  c[1] = ds;
+  dcb.command = 0xDA;
+  dcb.timeout = 15;
+  dcb.buffer = response;
+  dcb.buffer_bytes = 256;
+  dcb.aux1 = ds;
 
-//  io_command_and_response(&c,2);
+#ifdef MOCK_DEVICES
+  /* do nothing */
+  last_rc = FUJINET_RC_OK;
+#else
+  last_rc = fujinet_dcb_exec(&dcb);
+#endif
 
   return response;
 }
@@ -297,6 +425,7 @@ void io_create_new(unsigned char selected_host_slot,unsigned char selected_devic
   strcpy(&nd[7],path);
 
 //  eos_write_character_device(FUJI_DEV,&nd,sizeof(nd));
+  last_rc = FUJINET_RC_NOT_IMPLEMENTED;
 }
 
 void io_mount_disk_image(unsigned char ds, unsigned char mode)
@@ -306,6 +435,7 @@ void io_mount_disk_image(unsigned char ds, unsigned char mode)
   c[2]=mode;
 
 //  eos_write_character_device(FUJI_DEV,&c,sizeof(c));
+  last_rc = FUJINET_RC_NOT_IMPLEMENTED;
 }
 
 void io_set_boot_config(unsigned char toggle)
@@ -314,6 +444,7 @@ void io_set_boot_config(unsigned char toggle)
   c[1]=toggle;
 
 //  eos_write_character_device(FUJI_DEV,&c,sizeof(c));
+  last_rc = FUJINET_RC_NOT_IMPLEMENTED;
 }
 
 void io_umount_disk_image(unsigned char ds)
@@ -322,11 +453,13 @@ void io_umount_disk_image(unsigned char ds)
   c[1]=ds;
 
 //  eos_write_character_device(FUJI_DEV,&c,sizeof(c));
+  last_rc = FUJINET_RC_NOT_IMPLEMENTED;
 }
 
 void io_boot(void)
 {
 //  eos_init();
+  last_rc = FUJINET_RC_NOT_IMPLEMENTED;
 }
 
 void io_build_directory(unsigned char ds, unsigned long numBlocks, char *v)
@@ -356,6 +489,7 @@ void io_build_directory(unsigned char ds, unsigned long numBlocks, char *v)
   // Write directory
 //  eos_initialize_directory(ds, 1, nb, v);
 //  eos_initialize_directory(ds, 1, nb, v);
+  last_rc = FUJINET_RC_NOT_IMPLEMENTED;
 }
 
 bool io_get_device_enabled_status(unsigned char d)
@@ -372,6 +506,8 @@ bool io_get_device_enabled_status(unsigned char d)
 //  eos_write_character_device(FUJI_DEV,ds,sizeof(ds));
 //  eos_read_character_device(FUJI_DEV,response,sizeof(response));
 
+  last_rc = FUJINET_RC_NOT_IMPLEMENTED;
+
   return response[0];
 }
 
@@ -387,6 +523,7 @@ void io_enable_device(unsigned char d)
   ed.dev = d;
 
 //  eos_write_character_device(FUJI_DEV,ed,sizeof(ed));
+  last_rc = FUJINET_RC_NOT_IMPLEMENTED;
 }
 
 void io_disable_device(unsigned char d)
@@ -401,6 +538,7 @@ void io_disable_device(unsigned char d)
   dd.dev = d;
 
 //  eos_write_character_device(FUJI_DEV,dd,sizeof(dd));
+  last_rc = FUJINET_RC_NOT_IMPLEMENTED;
 }
 
 void io_update_devices_enabled(bool *e)
@@ -408,9 +546,9 @@ void io_update_devices_enabled(bool *e)
   char i;
 
   for (i=0;i<4;i++)
-    {
-      e[i]=io_get_device_enabled_status(io_device_slot_to_device(i));
-    }
+  {
+    e[i]=io_get_device_enabled_status(io_device_slot_to_device(i));
+  }
 }
 
 void io_copy_file(unsigned char source_slot, unsigned char destination_slot)
@@ -422,6 +560,7 @@ void io_copy_file(unsigned char source_slot, unsigned char destination_slot)
   strcpy(&cf[3],copySpec);
   
 //  eos_write_character_device(FUJI_DEV,cf,sizeof(cf));
+  last_rc = FUJINET_RC_NOT_IMPLEMENTED;
 }
 
 unsigned char io_device_slot_to_device(unsigned char ds)

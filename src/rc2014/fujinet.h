@@ -25,6 +25,8 @@ struct fujinet_dcb {
 
 typedef enum {
     FUJINET_RC_OK,
+    FUJINET_RC_NOT_IMPLEMENTED,
+    FUJINET_RC_NOT_SUPPORTED,
     FUJINET_RC_INVALID,
     FUJINET_RC_TIMEOUT,
     FUJINET_RC_NO_ACK,
