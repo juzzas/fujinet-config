@@ -92,19 +92,13 @@ bool io_error(void)
 
 unsigned char io_get_wifi_status(void)
 {
-  struct fujinet_dcb dcb = {};
-
-  dcb.command = 0xFA;
-  dcb.response = response;
-  dcb.response_bytes = 1;
-  dcb.timeout = 15;
-
   sleep(1);
+
 #ifdef MOCK_WIFI
   last_rc = FUJINET_RC_OK;
   return 0;
 #else
-  last_rc = fujinet_dcb_exec(&dcb);
+  last_rc = fujinet_wifi_status(response);
 
   return response[0];
 #endif
@@ -112,39 +106,22 @@ unsigned char io_get_wifi_status(void)
 
 NetConfig* io_get_ssid(void)
 {
-  struct fujinet_dcb dcb = {};
-
-  dcb.command = 0xFE;
-  dcb.response = response;
-  dcb.response_bytes = sizeof(NetConfig);
-  dcb.timeout = 15;
-
-
 #ifdef MOCK_WIFI
   last_rc = FUJINET_RC_OK;
   return mock_netconfig;
 #else
-  last_rc = fujinet_dcb_exec(&dcb);
-
+  last_rc = fujinet_get_ssid(response);
   return (NetConfig *)response;
 #endif
 }
 
 unsigned char io_scan_for_networks(void)
 {
-  struct fujinet_dcb dcb = {};
-
-  dcb.command = 0xFD;
-  dcb.response = response;
-  dcb.response_bytes = 4;
-  dcb.timeout = 15;
-
-
 #ifdef MOCK_WIFI
   last_rc = FUJINET_RC_OK;
   return mock_ssid_num;
 #else
-  last_rc = fujinet_dcb_exec(&dcb);
+  last_rc = fujinet_scan_for_networks(response);
 
   return response[0];
 #endif
@@ -152,19 +129,11 @@ unsigned char io_scan_for_networks(void)
 
 SSIDInfo *io_get_scan_result(unsigned char n)
 {
-  struct fujinet_dcb dcb = {};
-
-  dcb.command = 0xFC;
-  dcb.response = response;
-  dcb.response_bytes = sizeof(SSIDInfo);
-  dcb.timeout = 15;
-  dcb.aux1 = n;
-
 #ifdef MOCK_WIFI
   last_rc = FUJINET_RC_OK;
   return &mock_ssid[n];
 #else
-  last_rc = fujinet_dcb_exec(&dcb);
+  last_rc = fujinet_get_scan_result(n, response);
 
   return (SSIDInfo *)response;
 #endif
@@ -172,18 +141,11 @@ SSIDInfo *io_get_scan_result(unsigned char n)
 
 AdapterConfig *io_get_adapter_config(void)
 {
-  struct fujinet_dcb dcb = {};
-
-  dcb.command = 0xE8;
-  dcb.response = response;
-  dcb.response_bytes = sizeof(AdapterConfig);
-  dcb.timeout = 15;
-
 #ifdef MOCK_WIFI
   last_rc = FUJINET_RC_OK;
   return mock_cfg;
 #else
-  last_rc = fujinet_dcb_exec(&dcb);
+  last_rc = fujinet_dcb_exec(response);
 
   return (AdapterConfig *)response;
 #endif
@@ -191,87 +153,51 @@ AdapterConfig *io_get_adapter_config(void)
 
 void io_set_ssid(NetConfig *nc)
 {
-  struct fujinet_dcb dcb = {};
-
-  dcb.command = 0xFB;
-  dcb.buffer = (uint8_t *)nc;
-  dcb.buffer_bytes = sizeof(NetConfig);
-  dcb.timeout = 15;
-
 #ifdef MOCK_WIFI
   memcpy(&mock_cfg, nc, sizeof(NetConfig));
   last_rc = FUJINET_RC_OK;
 #else
-  last_rc = fujinet_dcb_exec(&dcb);
+  last_rc = fujinet_set_ssid(nc);
 #endif
 }
 
 void io_get_device_slots(DeviceSlot *d)
 {
-  struct fujinet_dcb dcb = {};
-
-  dcb.command = 0xF2;
-  dcb.response = (uint8_t *)d;
-  dcb.response_bytes = sizeof(DeviceSlot) * 8;
-  dcb.timeout = 15;
-
 #ifdef MOCK_DEVICES
   memcpy(d,mock_devices,sizeof(DeviceSlot) * 8);
   last_rc = FUJINET_RC_OK;
 #else
-  last_rc = fujinet_dcb_exec(&dcb);
+  last_rc = fujinet_get_device_slots(d);
 #endif
 }
 
 void io_get_host_slots(HostSlot *h)
 {
-  struct fujinet_dcb dcb = {};
-
-  dcb.command = 0xF4;
-  dcb.response = (uint8_t *)h;
-  dcb.response_bytes = sizeof(HostSlot) * 8;
-  dcb.timeout = 15;
-
 #ifdef MOCK_DEVICES
   memcpy(h,mock_hosts,sizeof(HostSlot) * 8);
   last_rc = FUJINET_RC_OK;
 #else
-  last_rc = fujinet_dcb_exec(&dcb);
+  last_rc = fujinet_get_host_slots(h);
 #endif
-
 }
 
 void io_put_host_slots(HostSlot *h)
 {
-  struct fujinet_dcb dcb = {};
-
-  dcb.command = 0xF3;
-  dcb.buffer = (uint8_t *)h;
-  dcb.buffer_bytes = sizeof(HostSlot) * 8;
-  dcb.timeout = 15;
-
 #ifdef MOCK_DEVICES
   memcpy(mock_hosts, h, sizeof(HostSlot) * 8);
   last_rc = FUJINET_RC_OK;
 #else
-  last_rc = fujinet_dcb_exec(&dcb);
+  last_rc = fujinet_put_host_slots(h);
 #endif
 }
 
 void io_put_device_slots(DeviceSlot *d)
 {
-  struct fujinet_dcb dcb = {};
-
-  dcb.command = 0xF1;
-  dcb.buffer = (uint8_t *)d;
-  dcb.buffer_bytes = sizeof(DeviceSlot) * 8;
-  dcb.timeout = 15;
-
 #ifdef MOCK_DEVICES
   memcpy(mock_hosts, d, sizeof(DeviceSlot) * 8);
   last_rc = FUJINET_RC_OK;
 #else
-  last_rc = fujinet_dcb_exec(&dcb);
+  last_rc = io_put_device_slots(d);
 #endif
 
   csleep(10);
@@ -279,99 +205,53 @@ void io_put_device_slots(DeviceSlot *d)
 
 void io_mount_host_slot(unsigned char hs)
 {
-  struct fujinet_dcb dcb = {};
-
-  dcb.command = 0xF9;
-  dcb.timeout = 15;
-  dcb.aux1 = hs;
-
 #ifdef MOCK_DEVICES
   /* do nothing */
   last_rc = FUJINET_RC_OK;
 #else
-  last_rc = fujinet_dcb_exec(&dcb);
+  last_rc = fujinet_mount_host_slot(hs);
 #endif
 }
 
 void io_open_directory(unsigned char hs, char *p, char *f)
 {
-  struct fujinet_dcb dcb = {};
-  char c[258];
-  char *e;
-
-  memset(&c,0,258);
-
-  strcpy(c, p);
-  e = c;
-
-  if (f[0]!=0x00) {
-    while (*e != 0x00)
-      e++;
-
-    e++;
-    strcpy(e,f);
-  }
-
-  dcb.command = 0xF1;
-  dcb.buffer = (uint8_t *)c;
-  dcb.buffer_bytes = 256;
-  dcb.timeout = 15;
-  dcb.aux1 = hs;
-
 #ifdef MOCK_DEVICES
   /* do nothing */
   last_rc = FUJINET_RC_OK;
 #else
-  last_rc = fujinet_dcb_exec(&dcb);
+  last_rc = fujinet_open_directory(hs, p, f);
 #endif
 }
 
 char *io_read_directory(unsigned char l, unsigned char a)
 {
-  struct fujinet_dcb dcb = {};
-
-  dcb.command = 0xF6;
-  dcb.timeout = 15;
-  dcb.aux1 = l;
-  dcb.aux2 = a;
-
 #ifdef MOCK_DEVICES
   /* do nothing */
   last_rc = FUJINET_RC_OK;
 #else
-  last_rc = fujinet_dcb_exec(&dcb);
+  last_rc = fujinet_read_directory(response, l, a);
 #endif
+
+  return response;
 }
 
 void io_close_directory(void)
 {
-  struct fujinet_dcb dcb = {};
-
-  dcb.command = 0xF5;
-  dcb.timeout = 15;
-
 #ifdef MOCK_DEVICES
   /* do nothing */
   last_rc = FUJINET_RC_OK;
 #else
-  last_rc = fujinet_dcb_exec(&dcb);
+  last_rc = fujinet_close_directory();
 #endif
 }
 
 void io_set_directory_position(DirectoryPosition pos)
 {
-  struct fujinet_dcb dcb = {};
-
-  dcb.command = 0xE4;
-  dcb.timeout = 15;
-  dcb.aux1 = pos & 0xff;
-  dcb.aux2 = (pos >> 8) & 0xff;
-
 #ifdef MOCK_DEVICES
   /* do nothing */
   last_rc = FUJINET_RC_OK;
 #else
-  last_rc = fujinet_dcb_exec(&dcb);
+  last_rc = fujinet_set_directory_position(pos);
 #endif
 }
 
@@ -381,7 +261,7 @@ void io_set_device_filename(unsigned char ds, char* e)
 
   dcb.command = 0xE4;
   dcb.timeout = 15;
-  dcb.buffer = e;
+  dcb.buffer = (uint8_t *)e;
   dcb.buffer_bytes = 256;
   dcb.aux1 = ds;
 
@@ -391,6 +271,8 @@ void io_set_device_filename(unsigned char ds, char* e)
 #else
   last_rc = fujinet_dcb_exec(&dcb);
 #endif
+
+  last_rc = FUJINET_RC_NOT_IMPLEMENTED;
 }
 
 char *io_get_device_filename(unsigned char ds)
@@ -409,6 +291,8 @@ char *io_get_device_filename(unsigned char ds)
 #else
   last_rc = fujinet_dcb_exec(&dcb);
 #endif
+
+  last_rc = FUJINET_RC_NOT_IMPLEMENTED;
 
   return response;
 }

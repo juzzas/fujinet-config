@@ -14,6 +14,7 @@
 
 typedef unsigned short DirectoryPosition;
 
+
 /**
  * Returned info for a single SSID entry
  * from a WiFi scan
