@@ -18,7 +18,7 @@
 #include "console.h"
 #include "io.h"
 
-#define KEY_RETURN       0x0A
+#define KEY_RETURN       0x0D
 #define KEY_ESCAPE       0x1B
 #define KEY_SPACE        0x20
 #define KEY_1            0x31
@@ -83,13 +83,13 @@ void input_line(unsigned char x, unsigned char y, unsigned char o, char *c, unsi
   // x += o;
 
   cursor_pos(0, y);
-
+    cputc(":");
   while(1)
   {
     cursor_pos(x + i, y);
     cursor(1); // turn on cursor
     cursor_pos(x + i, y);
-    a = cgetc();
+    a = input(); //cgetc();
 
     switch (a)
     {
@@ -109,7 +109,7 @@ void input_line(unsigned char x, unsigned char y, unsigned char o, char *c, unsi
     case KEY_RIGHT_ARROW:
       break;
     case KEY_RETURN:
-      cputc(' ');
+      cputc('#');
       c[i] = 0;
       cursor(0); // turn off cursor
       return; // done

@@ -3,6 +3,9 @@ TARGET_EXEC ?= fnconfig.com
 BUILD_DIR ?= ./build
 SRC_DIRS ?= ./src
 
+LIB_PROJECT := @../fujinet-rc2014/lib/lib_rc2014_cpm.lst
+LIB_PROJECT_INC := ../fujinet-rc2014/lib/include
+
 #ADDL_DIR1 := ../eoslib/src
 #ADDL_DIR2 := ../smartkeyslib/src
 #
@@ -20,15 +23,15 @@ DEPS := $(OBJS:.o=.d)
 #LDFLAGS=+rc2014 -subtype=cpm -create-app -o$(TARGET_EXEC)
 #ASFLAGS=+rc2014 -subtype=cpm
 
-CFLAGS=+cpm -DBUILD_RC2014 -clib=ansi -pragma-redirect:fputc_cons=fputc_cons_generic
-LDFLAGS=+cpm -create-app -o$(TARGET_EXEC)
+CFLAGS=+cpm -DBUILD_RC2014 -I$(LIB_PROJECT_INC) -clib=ansi -pragma-redirect:fputc_cons=fputc_cons_generic
+LDFLAGS=+cpm -create-app -I$(LIB_PROJECT_INC) -o$(TARGET_EXEC)
 ASFLAGS=+cpm
 
 INC_DIRS := $(shell find $(SRC_DIRS) -type d)
 INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
 $(BUILD_DIR)/$(TARGET_EXEC): $(OBJS)
-	$(CC) $(LDFLAGS) $(OBJS)
+	$(CC) $(LDFLAGS) $(OBJS) $(LIB_PROJECT)
 	#cp autorun.ddp ../fujinet-platformio/data/BUILD_ADAM/
 
 # c source

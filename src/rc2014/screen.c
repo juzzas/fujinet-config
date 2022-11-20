@@ -126,10 +126,11 @@ void screen_set_wifi(AdapterConfig *ac)
 void screen_set_wifi_display_ssid(char n, SSIDInfo *s)
 {
   char meter[4]={0x20,0x20,0x20,0x00};
-  char ds[32];
+  char ds[SSID_MAXLEN+1];
 
   memset(ds,0x20,32);
   strncpy(ds,s->ssid,32);
+  ds[32] = 0; // force null termination
 
   if (s->rssi > -50)
     {

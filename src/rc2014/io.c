@@ -11,9 +11,10 @@
 #include "io.h"
 #include "globals.h"
 #include "fujinet.h"
+#include "fujinet_device.h"
 
 #define FUJI_DEV 0x0F
-#define MOCK_WIFI
+#undef MOCK_WIFI
 #define MOCK_DEVICES
 #define MOCK_HOSTS
 
@@ -98,7 +99,7 @@ unsigned char io_get_wifi_status(void)
   last_rc = FUJINET_RC_OK;
   return 0;
 #else
-  last_rc = fujinet_wifi_status(response);
+  last_rc = fujinet_get_wifi_status(response);
   return response[0];
 #endif
 }
@@ -255,6 +256,7 @@ void io_set_device_filename(unsigned char ds, char* e)
 {
   struct fujinet_dcb dcb = {};
 
+  dcb.device = 0x70;
   dcb.command = 0xE4;
   dcb.timeout = 15;
   dcb.buffer = (uint8_t *)e;
@@ -275,6 +277,7 @@ char *io_get_device_filename(unsigned char ds)
 {
   struct fujinet_dcb dcb = {};
 
+  dcb.device = 0x70;
   dcb.command = 0xDA;
   dcb.timeout = 15;
   dcb.buffer = response;
