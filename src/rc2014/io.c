@@ -15,8 +15,8 @@
 
 #define FUJI_DEV 0x0F
 #undef MOCK_WIFI
-#define MOCK_DEVICES
-#define MOCK_HOSTS
+#undef MOCK_DEVICES
+#undef MOCK_HOSTS
 
 static uint8_t response[1024];
 static FUJINET_RC last_rc = FUJINET_RC_OK;
@@ -194,7 +194,7 @@ void io_put_device_slots(DeviceSlot *d)
   memcpy(mock_hosts, d, sizeof(DeviceSlot) * 8);
   last_rc = FUJINET_RC_OK;
 #else
-  last_rc = io_put_device_slots(d);
+  last_rc = fujinet_put_device_slots(d);
 #endif
 
   csleep(10);
@@ -254,88 +254,64 @@ void io_set_directory_position(DirectoryPosition pos)
 
 void io_set_device_filename(unsigned char ds, char* e)
 {
-  struct fujinet_dcb dcb = {};
-
-  dcb.device = 0x70;
-  dcb.command = 0xE4;
-  dcb.timeout = 15;
-  dcb.buffer = (uint8_t *)e;
-  dcb.buffer_bytes = 256;
-  dcb.aux1 = ds;
-
 #ifdef MOCK_DEVICES
   /* do nothing */
-  last_rc = FUJINET_RC_OK;
-#else
-  last_rc = fujinet_dcb_exec(&dcb);
-#endif
-
   last_rc = FUJINET_RC_NOT_IMPLEMENTED;
+#else
+  last_rc = fujinet_set_device_filename(ds, e);
+#endif
 }
 
 char *io_get_device_filename(unsigned char ds)
 {
-  struct fujinet_dcb dcb = {};
-
-  dcb.device = 0x70;
-  dcb.command = 0xDA;
-  dcb.timeout = 15;
-  dcb.buffer = response;
-  dcb.buffer_bytes = 256;
-  dcb.aux1 = ds;
-
 #ifdef MOCK_DEVICES
   /* do nothing */
-  last_rc = FUJINET_RC_OK;
+  last_rc = FUJINET_RC_NOT_IMPLEMENTED;
 #else
-  last_rc = fujinet_dcb_exec(&dcb);
+  last_rc = fujinet_get_device_filename(ds, response);
 #endif
 
-  last_rc = FUJINET_RC_NOT_IMPLEMENTED;
   return response;
 }
 
 void io_create_new(unsigned char selected_host_slot,unsigned char selected_device_slot,unsigned long selected_size,char *path)
 {
-  char nd[263]={0xE7,0x00,0x00,0x00,0x00,0x00,0x00};
-  char *c = &nd[3];
-  unsigned long *l = (unsigned long *)c;
-  
-  nd[1]=selected_host_slot;
-  nd[2]=selected_device_slot;
-  *l=selected_size;
-  strcpy(&nd[7],path);
-
-//  eos_write_character_device(FUJI_DEV,&nd,sizeof(nd));
-  last_rc = FUJINET_RC_NOT_IMPLEMENTED;
+#ifdef MOCK_DEVICES
+    /* do nothing */
+    last_rc = FUJINET_RC_NOT_IMPLEMENTED;
+#else
+    last_rc = fujinet_create_new(selected_host_slot, selected_device_slot, selected_size, path);
+#endif
 }
 
 void io_mount_disk_image(unsigned char ds, unsigned char mode)
 {
-  char c[3]={0xF8,0x00,0x00};
-  c[1]=ds;
-  c[2]=mode;
-
-//  eos_write_character_device(FUJI_DEV,&c,sizeof(c));
-  last_rc = FUJINET_RC_NOT_IMPLEMENTED;
+#ifdef MOCK_DEVICES
+    /* do nothing */
+    last_rc = FUJINET_RC_NOT_IMPLEMENTED;
+#else
+    last_rc = fujinet_mount_disk_image(ds, mode);
+#endif
 }
 
 void io_set_boot_config(unsigned char toggle)
 {
-  char c[2]={0xD9,0x00};
-  c[1]=toggle;
-
-//  eos_write_character_device(FUJI_DEV,&c,sizeof(c));
-  last_rc = FUJINET_RC_NOT_IMPLEMENTED;
+#ifdef MOCK_DEVICES
+    /* do nothing */
+    last_rc = FUJINET_RC_NOT_IMPLEMENTED;
+#else
+    last_rc = fujinet_set_boot_config(toggle);
+#endif
 }
 
 void io_umount_disk_image(unsigned char ds)
 {
-  char c[2]={0xE9,0x00};
-  c[1]=ds;
-
-//  eos_write_character_device(FUJI_DEV,&c,sizeof(c));
-  last_rc = FUJINET_RC_NOT_IMPLEMENTED;
+#ifdef MOCK_DEVICES
+    /* do nothing */
+    last_rc = FUJINET_RC_NOT_IMPLEMENTED;
+#else
+    last_rc = fujinet_umount_disk_image(ds);
+#endif
 }
 
 void io_boot(void)
@@ -376,51 +352,33 @@ void io_build_directory(unsigned char ds, unsigned long numBlocks, char *v)
 
 bool io_get_device_enabled_status(unsigned char d)
 {
-  struct
-  {
-    unsigned char cmd;
-    unsigned char dev;
-  } ds;
-
-  ds.cmd = 0xD1; // Get Device status
-  ds.dev = d;
-
-//  eos_write_character_device(FUJI_DEV,ds,sizeof(ds));
-//  eos_read_character_device(FUJI_DEV,response,sizeof(response));
-
-  last_rc = FUJINET_RC_NOT_IMPLEMENTED;
-
-  return response[0];
+#ifdef MOCK_DEVICES
+    /* do nothing */
+    last_rc = FUJINET_RC_NOT_IMPLEMENTED;
+#else
+    last_rc = fujinet_get_device_enabled_status(d, response);
+#endif
+    return response[0];
 }
 
 void io_enable_device(unsigned char d)
 {
-  struct
-  {
-    unsigned char cmd;
-    unsigned char dev;
-  } ed;
-
-  ed.cmd = 0xD5;
-  ed.dev = d;
-
-//  eos_write_character_device(FUJI_DEV,ed,sizeof(ed));
-  last_rc = FUJINET_RC_NOT_IMPLEMENTED;
+#ifdef MOCK_DEVICES
+    /* do nothing */
+    last_rc = FUJINET_RC_NOT_IMPLEMENTED;
+#else
+    last_rc = fujinet_enable_device(d);
+#endif
 }
 
 void io_disable_device(unsigned char d)
 {
-  struct
-  {
-    unsigned char cmd;
-    unsigned char dev;
-  } dd;
-
-  dd.cmd = 0xD4;
-  dd.dev = d;
-
-//  eos_write_character_device(FUJI_DEV,dd,sizeof(dd));
-  last_rc = FUJINET_RC_NOT_IMPLEMENTED;
+#ifdef MOCK_DEVICES
+    /* do nothing */
+    last_rc = FUJINET_RC_NOT_IMPLEMENTED;
+#else
+    last_rc = fujinet_disable_device(d);
+#endif
 }
 
 void io_update_devices_enabled(bool *e)
