@@ -143,7 +143,7 @@ AdapterConfig *io_get_adapter_config(void)
   last_rc = FUJINET_RC_OK;
   return mock_cfg;
 #else
-  last_rc = fujinet_dcb_exec(response);
+  last_rc = fujinet_get_adapter_config(response);
   return (AdapterConfig *)response;
 #endif
 }
@@ -356,7 +356,7 @@ bool io_get_device_enabled_status(unsigned char d)
     /* do nothing */
     last_rc = FUJINET_RC_NOT_IMPLEMENTED;
 #else
-    last_rc = fujinet_get_device_enabled_status(d, response);
+    last_rc = fujinet_get_device_enabled_status(d + RC2014_DEVICEID_DISK, response);
 #endif
     return response[0];
 }
@@ -367,7 +367,7 @@ void io_enable_device(unsigned char d)
     /* do nothing */
     last_rc = FUJINET_RC_NOT_IMPLEMENTED;
 #else
-    last_rc = fujinet_enable_device(d);
+    last_rc = fujinet_enable_device(d + RC2014_DEVICEID_DISK);
 #endif
 }
 
@@ -377,7 +377,7 @@ void io_disable_device(unsigned char d)
     /* do nothing */
     last_rc = FUJINET_RC_NOT_IMPLEMENTED;
 #else
-    last_rc = fujinet_disable_device(d);
+    last_rc = fujinet_disable_device(d + RC2014_DEVICEID_DISK);
 #endif
 }
 
