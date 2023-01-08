@@ -354,7 +354,7 @@ void screen_select_file_display(char *p, char *f)
 
   // Update content area
   screen_gotoxy(0,0); cprintf("%-40s",selected_host_name);
-  screen_gotoxy(0,1);
+  screen_gotoxy(3,1);
   if (f[0]==0x00)
     cprintf("%-40s",p);
   else
@@ -363,26 +363,26 @@ void screen_select_file_display(char *p, char *f)
 
 void screen_select_file_prev(void)
 {
-  screen_gotoxy(0,2); cprintf("%-40s","[...]");
+  screen_gotoxy(3,2); cprintf("%-40s","[...]");
 }
 
 void screen_select_file_display_long_filename(char *e)
 {
-  screen_gotoxy(0,19);
+  screen_gotoxy(3,19);
   cprintf("%-64s",e);
 }
 
 void screen_select_file_next(void)
 {
-  screen_gotoxy(0,18); cprintf("%-40s","[...]");
+  screen_gotoxy(3,18); cprintf("%-40s","[...]");
 }
 
 void screen_select_file_display_entry(unsigned char y, char* e)
 {
-  screen_gotoxy(0,y+3);
+  screen_gotoxy(3,y+3);
   // cprintf("%c%c",*e++,*e++);
   // cprintf("%-30s",e);
-  cprintf("%-40s",&e[2]); // skip the first two chars from FN (hold over from Adam)
+  cprintf("%-40s",e); // skip the first two chars from FN (hold over from Adam)
 }
 
 void screen_select_file_clear_long_filename(void)

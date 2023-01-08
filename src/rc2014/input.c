@@ -30,7 +30,7 @@
 #define KEY_7            0x37
 #define KEY_8            0x38
 #define KEY_TAB          9
-#define KEY_DELETE       127
+#define KEY_DELETE       0x08   // 127
 #define KEY_UP_ARROW     5     // ctrl-e
 #define KEY_DOWN_ARROW   24    // ctrl-x
 #define KEY_LEFT_ARROW   19    // ctrl-s
@@ -170,7 +170,7 @@ DHSubState input_destination_host_slot_choose(void)
 
 SFSubState input_select_file_choose(void)
 {
-  unsigned char k = cgetc();
+  unsigned char k = input();
 
   switch (k)
   {
@@ -271,7 +271,7 @@ SSSubState input_select_slot_choose(void)
   // cprintf(" [1-4] SELECT SLOT\r\n [RETURN] INSERT INTO SLOT\r\n [ESC] TO ABORT.");
    unsigned char k;
 
-   k=cgetc();
+   k=input();
 
   switch(k)
   {
@@ -316,7 +316,7 @@ SSSubState input_select_slot_choose(void)
 SISubState input_show_info(void)
 {
   char c;
-  c =cgetc();
+  c =input();
   switch (c)
   {
   case 'c':
@@ -336,7 +336,7 @@ SISubState input_show_info(void)
 
 HDSubState input_hosts_and_devices_hosts(void)
 {
-  unsigned char k=cgetc();
+  unsigned char k=input();
 
   switch (k)
   {
