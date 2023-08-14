@@ -6,7 +6,6 @@
 
 #include <stdbool.h>
 #include <stdlib.h>
-#include <stdio.h>
 #include <atari.h>
 #include <conio.h>
 #include <string.h>
@@ -314,6 +313,22 @@ HDSubState input_hosts_and_devices_hosts(void)
   case 'C':
     state = SHOW_INFO;
     return HD_DONE;
+  case 'L':
+    // boot lobby.
+    memset(temp, 0, sizeof(temp));
+    screen_puts(0,24,"Boot Lobby Y/N? ");
+    _screen_input(16,24,temp,2);
+    screen_clear_line(24);
+    switch (temp[0])
+    {
+      case 'Y':
+      case 'y':
+        mount_and_boot_lobby();
+        return HD_DONE;
+      default: // Anything but Y/y take to mean "no"
+        return HD_HOSTS;
+      }
+    return HD_HOSTS;
   case KCODE_RETURN:
     selected_host_slot = bar_get() - HOSTS_START_Y;
     if ( !wifiEnabled && strcmp(hostSlots[selected_host_slot],"SD") != 0) // Don't go in a TNFS host if wifi is disabled.
@@ -409,6 +424,23 @@ HDSubState input_hosts_and_devices_devices(void)
   case 'C':
     state = SHOW_INFO;
     return HD_DONE;
+  case 'L':
+    // boot lobby.
+    // boot lobby.
+    memset(temp, 0, sizeof(temp));
+    screen_puts(0,24,"Boot Lobby Y/N? ");
+    _screen_input(16,24,temp,2);
+    screen_clear_line(24);
+    switch (temp[0])
+    {
+      case 'Y':
+      case 'y':
+        mount_and_boot_lobby();
+        return HD_DONE;
+      default: // Anything but Y/y take to mean "no"
+        return HD_DEVICES;
+      }
+    return HD_DEVICES;
   case '!':
     mount_and_boot();
   default:
@@ -421,6 +453,7 @@ SFSubState input_select_file_choose(void)
   unsigned char k;
   unsigned char y;
   unsigned char temp[30];
+  unsigned entryType;
 
   if (input_handle_console_keys() == 0x03)
   {
@@ -462,8 +495,12 @@ SFSubState input_select_file_choose(void)
   case '*': // took from fujinet-config
     pos += bar_get() - FILES_START_Y;
     screen_select_file_clear_long_filename();
-    if (select_file_is_folder())
+    entryType = select_file_entry_type();
+    
+    if (entryType == ENTRY_TYPE_FOLDER)
       return SF_ADVANCE_FOLDER;
+    else if (entryType == ENTRY_TYPE_LINK)
+      return SF_LINK;
     else
     {
       return SF_DONE;
@@ -472,6 +509,7 @@ SFSubState input_select_file_choose(void)
     return SF_DEVANCE_FOLDER;
 
   case '<':
+  case '+':
     if ( strlen(path) == 1 && pos <= 0 ) // We're at the root of the filesystem, and we're on the first page - go back to hosts/devices screen.
     {
       state = HOSTS_AND_DEVICES;
@@ -568,6 +606,7 @@ SSSubState input_select_slot_choose(void)
     return SS_CHOOSE;
   case KCODE_ESCAPE:
     state = SELECT_FILE;
+    backToFiles = true;
     return SS_DONE;
   case KCODE_RETURN: // For Atari I think we need to ask for file mode after this, it's not in the main select_slot.c code.
     selected_device_slot = bar_get() - DEVICES_START_MOUNT_Y;
@@ -578,6 +617,7 @@ SSSubState input_select_slot_choose(void)
     if (!k)
     {
       state = SELECT_FILE;
+      backToFiles = true;
     }
     return SS_DONE;
   default:

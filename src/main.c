@@ -101,8 +101,16 @@ void run(void)
 		case SHOW_INFO:
 			show_info();
 			break;
+		#ifdef BUILD_APPLE2
+		case SHOW_DEVICES:
+			io_list_devs();
+			break;
+		#endif
 		case DONE:
 			done();
+			#ifdef BUILD_A2CDA
+				return;
+			#endif
 			break;
 		}
   }
@@ -114,3 +122,14 @@ void main(void)
 	state = CHECK_WIFI;
 	run();
 }
+
+#ifdef BUILD_A2CDA
+void Start(void)
+{
+	main();
+}
+
+void ShutDown(void)
+{
+}
+#endif /* BUILD_A2CDA */

@@ -1,7 +1,7 @@
 #ifdef BUILD_APPLE2
 /**
  * FujiNet Config for #Apple2
- * 
+ *
  * Screen routines
  */
 
@@ -9,16 +9,16 @@
 #define SCREEN_H
 
 #include <stdbool.h>
-#include "fuji_typedefs.h"
+#include "../fuji_typedefs.h"
 
 void screen_init(void);
-void screen_inverse_line(unsigned char y);
 void screen_error(const char *c);
 
 void screen_putlcc(char c);
 void screen_put_inverse(const char c);
 void screen_print_inverse(const char *s);
 void screen_print_menu(const char *si, const char *sc);
+void screen_fujinetlogo(void);
 
 void screen_set_wifi(AdapterConfig* ac);
 void screen_set_wifi_display_ssid(char n, SSIDInfo *s);
@@ -37,7 +37,7 @@ void screen_hosts_and_devices_hosts(void);
 void screen_hosts_and_devices_host_slots(HostSlot *h);
 void screen_hosts_and_devices_devices(void);
 void screen_hosts_and_devices_device_slots(unsigned char y, DeviceSlot *d, bool *e);
- 
+
 void screen_hosts_and_devices_clear_host_slot(unsigned char i);
 void screen_hosts_and_devices_edit_host_slot(unsigned char i);
 
@@ -55,7 +55,7 @@ void screen_select_file_next(void);
 void screen_select_file_new_type(void);
 void screen_select_file_prev(void);
 void screen_select_file_display_long_filename(char *e);
-void screen_select_file_display_entry(unsigned char y, char* e);
+void screen_select_file_display_entry(unsigned char y, char* e, unsigned entryType);
 void screen_select_file_clear_long_filename(void);
 void screen_select_file_choose(char visibleEntries);
 void screen_select_file_new_size(unsigned char k);

@@ -7,8 +7,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <string.h>
-#include <stdio.h>
 #include <conio.h> // Used for interacting with the standard Atari 'console'
+#include <unistd.h> // For sleep
 #include "io.h"
 #include "globals.h"
 #include "screen.h"
@@ -21,8 +21,7 @@ NewDisk newDisk;
 unsigned char wifiEnabled=true;
 
 // variable to hold various responses that we just need to return a char*.
-char response[512];
-unsigned char directory_plus_filter[256];
+char response[256];
 
 void set_sio_defaults(void)
 {
@@ -76,6 +75,8 @@ bool io_get_wifi_enabled(void)
 unsigned char io_get_wifi_status(void)
 {
   unsigned char status;
+
+  sleep(1); // give the esp32 a moment to connect
 
   set_sio_defaults();
   OS.dcb.dcomnd = 0xFA; // Return wifi status
@@ -231,10 +232,10 @@ void io_open_directory(unsigned char hs, char *p, char *f)
   if (f[0] != 0x00)
   {
     // We have a filter, create a directory+filter string
-    memset(directory_plus_filter, 0, 256);
-    strcpy(directory_plus_filter, p);
-    strcpy(&directory_plus_filter[strlen(directory_plus_filter) + 1], f);
-    OS.dcb.dbuf = &directory_plus_filter;
+    memset(response, 0, 256);
+    strcpy(response, p);
+    strcpy(&response[strlen(response) + 1], f);
+    OS.dcb.dbuf = &response;
   }
   else
   {
@@ -324,6 +325,19 @@ void io_set_boot_config(unsigned char toggle)
   OS.dcb.daux1 = toggle;
   siov();
 }
+
+void io_set_boot_mode(unsigned char mode)
+{
+  set_sio_defaults();
+  OS.dcb.dcomnd = 0xD6;
+  OS.dcb.dstats = 0x00;
+  OS.dcb.dbuf = NULL;
+  OS.dcb.dtimlo = 0x0f;
+  OS.dcb.dbyt = 0;
+  OS.dcb.daux1 = mode;
+  siov();
+}
+
 
 void io_mount_disk_image(unsigned char ds, unsigned char mode)
 {

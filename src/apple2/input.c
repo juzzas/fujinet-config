@@ -1,5 +1,5 @@
 #ifdef BUILD_APPLE2
-/** 
+/**
  * Input routines
  */
 
@@ -8,6 +8,8 @@
 #include <stdbool.h>
 #include <apple2.h>
 #include <peekpoke.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include "globals.h"
 #include "input.h"
 #include "bar.h"
@@ -38,14 +40,19 @@
 
 #define STATUS_BAR 21 // defined in screen.c
 
+#define UNUSED(x) (void)(x);
+
 extern unsigned char copy_host_slot;
 extern bool copy_mode;
 extern bool long_entry_displayed;
+
+extern unsigned char io_create_type;
+
 /**
  * Get input from keyboard/joystick
  * @return keycode (or synthesized keycode if joystick)
  */
-unsigned char input()
+unsigned char input(void)
 {
   return cgetc();
 }
@@ -55,10 +62,6 @@ unsigned char input_ucase(void)
   unsigned char c = input();
   if ((c>='a') && (c<='z')) c&=~32;
   return c;
-}
-
-static void input_clear_bottom(void)
-{
 }
 
 /**
@@ -82,9 +85,9 @@ void input_line(unsigned char x, unsigned char y, unsigned char o, char *c, unsi
 
   i = o; // index into array and y-coordinate
   // x += o;
-  
+
   gotoy(y);
-    
+
   while(1)
   {
     gotox(x + i);
@@ -131,7 +134,10 @@ void input_line(unsigned char x, unsigned char y, unsigned char o, char *c, unsi
         if (a>64 && a<91)
           a += uc;
         gotox(x + i);
-        screen_putlcc(a);
+	if (password)
+	  screen_putlcc('*');
+	else
+	  screen_putlcc(a);
         c[i++] = a;
       }
     break;
@@ -139,22 +145,16 @@ void input_line(unsigned char x, unsigned char y, unsigned char o, char *c, unsi
   }
 }
 
-DHSubState input_destination_host_slot_choose(void) 
+DHSubState input_destination_host_slot_choose(void)
 {
     unsigned char k=input();
 
   switch(k)
     {
     case KEY_RETURN:
-      if (hostSlots[bar_get()][0] != 0x00)
-	{
-	  copy_host_slot=bar_get();
-	  copy_mode=true;
-	  state=SELECT_FILE;
-	  return DH_DONE;
-	}
-      else
-	return DH_CHOOSE;
+      selected_host_slot=bar_get();
+      copy_mode=true;
+      return DH_DONE;
     case KEY_ESCAPE:
       state=HOSTS_AND_DEVICES;
       return DH_ABORT;
@@ -166,7 +166,7 @@ DHSubState input_destination_host_slot_choose(void)
     case KEY_6:
     case KEY_7:
     case KEY_8:
-      bar_jump(k-0x31);
+      bar_jump(k-KEY_1);
       return DH_CHOOSE;
     case KEY_UP_ARROW:
       bar_up();
@@ -181,14 +181,19 @@ DHSubState input_destination_host_slot_choose(void)
 
 SFSubState input_select_file_choose(void)
 {
+  unsigned entryType;
   unsigned char k = cgetc();
 
   switch (k)
   {
+  case KEY_RIGHT_ARROW:
   case KEY_RETURN:
     pos += bar_get();
-    if (select_file_is_folder())
+    entryType = select_file_entry_type();
+    if (entryType == ENTRY_TYPE_FOLDER)
       return SF_ADVANCE_FOLDER;
+    else if (entryType == ENTRY_TYPE_LINK)
+      return SF_LINK;
     else
     {
       return SF_DONE;
@@ -206,6 +211,9 @@ SFSubState input_select_file_choose(void)
   case 'F':
   case 'f':
     return SF_FILTER;
+  case 'N':
+  case 'n':
+    return SF_NEW;
   // case KEY_RETURN: // KEY_SMART_VI:
   //   if (copy_mode == false)
   //   {
@@ -222,7 +230,6 @@ SFSubState input_select_file_choose(void)
     select_file_set_source_filename();
     return SF_COPY;
   case KEY_UP_ARROW:
-  case KEY_LEFT_ARROW:
     if ((bar_get() == 0) && (pos > 0))
       return SF_PREV_PAGE;
     else
@@ -232,8 +239,18 @@ SFSubState input_select_file_choose(void)
       select_display_long_filename();
       return SF_CHOOSE;
     }
+  case KEY_LEFT_ARROW:
+    if ( strlen(path) == 1 && pos <= 0 ) // We're at the root of the filesystem, and we're on the first page - go back to hosts/devices screen.
+    {
+      state = HOSTS_AND_DEVICES;
+      return SF_DONE;
+    }
+    if (pos > 0)
+      return SF_PREV_PAGE;
+    else
+      return SF_DEVANCE_FOLDER;
+    return SF_CHOOSE;
   case KEY_DOWN_ARROW:
-  case KEY_RIGHT_ARROW:
     if ((bar_get() == 14) && (dir_eof == false))
       return SF_NEXT_PAGE;
     else
@@ -245,11 +262,11 @@ SFSubState input_select_file_choose(void)
     }
     break;
   case ',':
-  case '<': 
+  case '<':
     if (pos > 0)
       return SF_PREV_PAGE;
   case '.':
-  case '>': 
+  case '>':
     if (dir_eof == false)
       return SF_NEXT_PAGE;
   default:
@@ -257,24 +274,51 @@ SFSubState input_select_file_choose(void)
   }
 }
 
-unsigned char input_select_file_new_type(void) 
+unsigned char input_select_file_new_type(void)
 {
-  // TODO: Implement
+  switch (cgetc())
+    {
+    case 'P':
+    case 'p':
+      io_create_type=0;
+      return 1;
+    case '2':
+      io_create_type=1;
+      return 2;
+    default:
+      io_create_type=0;
+      return 0;
+    }
 }
 
-unsigned long input_select_file_new_size(unsigned char t) 
+unsigned long input_select_file_new_size(unsigned char t)
 {
-  // TODO: implement
+  UNUSED(t); // Type not used.
+
+  switch (cgetc())
+    {
+    case '1':
+      return 280;
+    case '8':
+      return 1600;
+    case '3':
+      return 65535UL;
+    case 'C':
+    case 'c':
+      return 1; // CUSTOM
+    }
 }
 
-unsigned long input_select_file_new_custom(void) 
+unsigned long input_select_file_new_custom(void)
 {
-  // TODO: implement
+  char c[12];
+  input_line(0,22,0,c,32,false);
+  return atol(c);
 }
 
-void input_select_file_new_name(char *c) 
+void input_select_file_new_name(char *c)
 {
-  // TODO: Implement
+  input_line(0,22,0,c,255,false);
 }
 
 SSSubState input_select_slot_choose(void)
@@ -293,8 +337,10 @@ SSSubState input_select_slot_choose(void)
     case KEY_2:
     case KEY_3:
     case KEY_4:
-      bar_jump(k-0x31);
-      return SS_CHOOSE;
+    case KEY_5:
+    case KEY_6:
+      bar_jump(k-KEY_1);
+	  return SS_CHOOSE;
     // case KEY_SMART_IV:
     case 'E':
     case 'e':
@@ -359,7 +405,7 @@ HDSubState input_hosts_and_devices_hosts(void)
   case KEY_6:
   case KEY_7:
   case KEY_8:
-    bar_jump(k - KEY_1);
+    bar_jump(k-KEY_1);
     return HD_HOSTS;
   case KEY_TAB:
     bar_clear(false);
@@ -368,7 +414,7 @@ HDSubState input_hosts_and_devices_hosts(void)
     selected_host_slot = bar_get();
     if (hostSlots[selected_host_slot][0] != 0)
     {
-      strcpy(selected_host_name, hostSlots[selected_host_slot]);
+      strcpy((char *)selected_host_name, (char *)hostSlots[selected_host_slot]);
       state = SELECT_FILE;
       return HD_DONE;
     }
@@ -379,6 +425,10 @@ HDSubState input_hosts_and_devices_hosts(void)
   case 'C':
   case 'c':
     state = SHOW_INFO;
+    return HD_DONE;
+  case 'D':
+  case 'd':
+    state = SHOW_DEVICES;
     return HD_DONE;
   case 'E':
   case 'e':
@@ -412,6 +462,8 @@ HDSubState input_hosts_and_devices_devices(void)
     case KEY_2:
     case KEY_3:
     case KEY_4:
+    case KEY_5:
+    case KEY_6:
       bar_jump(k-KEY_1);
       selected_device_slot=bar_get();
       hosts_and_devices_long_filename();
@@ -449,6 +501,8 @@ HDSubState input_hosts_and_devices_devices(void)
       selected_device_slot=bar_get();
       hosts_and_devices_long_filename();
       return HD_DEVICES;
+    case KEY_ESCAPE: // ESC
+      return HD_DONE;
     default:
       return HD_DEVICES;
     }
@@ -461,7 +515,7 @@ void input_line_set_wifi_custom(char *c)
 
 void input_line_set_wifi_password(char *c)
 {
-  input_line(2, STATUS_BAR + 1, 0, c, 64, false);
+  input_line(2, STATUS_BAR + 1, 0, c, 64, true);
 }
 
 WSSubState input_set_wifi_select(void)

@@ -9,7 +9,7 @@
 
 # Space or comma separated list of cc65 supported target platforms to build for.
 # Default: c64 (lowercase!)
-TARGETS := atari
+TARGETS := apple2cda
 
 # Name of the final, single-file executable.
 # Default: name of the current dir with target name appended
@@ -27,7 +27,7 @@ CONFIG  :=
 
 # Additional C compiler flags and options.
 # Default: none
-CFLAGS  = -Os -DBUILD_ATARI
+CFLAGS = -I -P +F cc=-p\"src:apple2:orcac.h\" cc=-isrc cc=-isrc:apple2 cc=-i13:cc65 cc=-dBUILD_APPLE2 cc=-d__APPLE2__ cc=-d__fastcall__= cc=-dBUILD_A2CDA
 
 # Additional assembler flags and options.
 # Default: none
@@ -36,7 +36,6 @@ ASFLAGS =
 # Additional linker flags and options.
 # Default: none
 LDFLAGS = $(LDFLAGS.$(TARGETS))
-LDFLAGS.atari = --mapfile config.map
 
 # Path to the directory containing C and ASM sources.
 # Default: src
@@ -91,8 +90,8 @@ endef
 
 # Compiler and assembler flags for generating listings
 define _listing_
-  CFLAGS += --listing $$(@:.o=.lst)
-  ASFLAGS += --listing $$(@:.o=.lst)
+  CFLAGS += --listing $$(@:.root=.lst)
+  ASFLAGS += --listing $$(@:.root=.lst)
   REMOVES += $(addsuffix .lst,$(basename $(OBJECTS)))
 endef
 
@@ -150,6 +149,8 @@ ifdef CC65_HOME
 else
   CC := cl65
 endif
+CC := iix compile
+LINKER := iix link
 
 # Default emulator commands and options for particular targets.
 # Set EMUCMD to override.
@@ -209,7 +210,7 @@ TARGETLIST := $(subst $(COMMA),$(SPACE),$(TARGETS))
 ifeq ($(words $(TARGETLIST)),1)
 
 # Set PROGRAM to something like 'myprog.c64'.
-override PROGRAM := $(PROGRAM).com
+override PROGRAM := $(PROGRAM)
 
 # Set SOURCES to something like 'src/foo.c src/bar.s'.
 # Use of assembler files with names ending differently than .s is deprecated!
@@ -221,15 +222,16 @@ SOURCES += $(wildcard $(SRCDIR)/*.a65)
 # Add to SOURCES something like 'src/c64/me.c src/c64/too.s'.
 # Use of assembler files with names ending differently than .s is deprecated!
 SOURCES += $(wildcard $(SRCDIR)/$(TARGETLIST)/*.c)
+SOURCES += $(wildcard $(SRCDIR)/apple2/*.c)
 SOURCES += $(wildcard $(SRCDIR)/$(TARGETLIST)/*.s)
 SOURCES += $(wildcard $(SRCDIR)/$(TARGETLIST)/*.asm)
 SOURCES += $(wildcard $(SRCDIR)/$(TARGETLIST)/*.a65)
 
 # Set OBJECTS to something like 'obj/c64/foo.o obj/c64/bar.o'.
-OBJECTS := $(addsuffix .o,$(basename $(addprefix $(TARGETOBJDIR)/,$(notdir $(SOURCES)))))
+OBJECTS := $(addsuffix .root,$(basename $(addprefix $(TARGETOBJDIR)/,$(notdir $(SOURCES)))))
 
 # Set DEPENDS to something like 'obj/c64/foo.d obj/c64/bar.d'.
-DEPENDS := $(OBJECTS:.o=.d)
+DEPENDS := $(OBJECTS:.root=.d)
 
 # Add to LIBS something like 'src/foo.lib src/c64/bar.lib'.
 LIBS += $(wildcard $(SRCDIR)/*.lib)
@@ -287,41 +289,39 @@ CC65TARGET := $(firstword $(subst .,$(SPACE),$(TARGETLIST)))
 $(TARGETOBJDIR):
 	$(call MKDIR,$@)
 
-vpath %.c $(SRCDIR)/$(TARGETLIST) $(SRCDIR)
+vpath %.c $(SRCDIR)/apple2 $(SRCDIR)/$(TARGETLIST) $(SRCDIR)
 
-$(TARGETOBJDIR)/%.o: %.c | $(TARGETOBJDIR)
-	$(CC) -t $(CC65TARGET) -c --create-dep $(@:.o=.d) $(CFLAGS) -o $@ $<
+$(TARGETOBJDIR)/%.root: %.c | $(TARGETOBJDIR)
+	$(CC) $< $(CFLAGS) keep=$(TARGETOBJDIR)/$$
 
 vpath %.s $(SRCDIR)/$(TARGETLIST) $(SRCDIR)
 
-$(TARGETOBJDIR)/%.o: %.s | $(TARGETOBJDIR)
+$(TARGETOBJDIR)/%.root: %.s | $(TARGETOBJDIR)
 	$(CC) -t $(CC65TARGET) -c --create-dep $(@:.o=.d) $(ASFLAGS) -o $@ $<
 
 vpath %.asm $(SRCDIR)/$(TARGETLIST) $(SRCDIR)
 
-$(TARGETOBJDIR)/%.o: %.asm | $(TARGETOBJDIR)
+$(TARGETOBJDIR)/%.root: %.asm | $(TARGETOBJDIR)
 	$(CC) -t $(CC65TARGET) -c --create-dep $(@:.o=.d) $(ASFLAGS) -o $@ $<
 
 vpath %.a65 $(SRCDIR)/$(TARGETLIST) $(SRCDIR)
 
-$(TARGETOBJDIR)/%.o: %.a65 | $(TARGETOBJDIR)
+$(TARGETOBJDIR)/%.root: %.a65 | $(TARGETOBJDIR)
 	$(CC) -t $(CC65TARGET) -c --create-dep $(@:.o=.d) $(ASFLAGS) -o $@ $<
 
-$(PROGRAM): $(CONFIG) $(OBJECTS) $(LIBS)
-	$(CC) -t $(CC65TARGET) $(LDFLAGS) -o $@ $(patsubst %.cfg,-C %.cfg,$^)
+$(PROGRAM): $(OBJECTS) $(LIBS)
+	$(LINKER) $(subst .root,,$^) keep=$@
 
 test: $(PROGRAM)
 	$(PREEMUCMD)
 	$(EMUCMD) $<
 	$(POSTEMUCMD)
 
-
 dist: $(PROGRAM)
-	mkdir -p dist
-	cp ../fujinet-config-tools/atari/dist/*.COM dist/ || true
-	cp ../fujinet-config-tools/atari/dist/*.com dist/ || true
-	cp $(PROGRAM) dist/
-	dir2atr -m -S -B picoboot.bin autorun.atr dist/
+	     cp dist.apple2/bootable.po dist.apple2/dist.po
+#	     java -jar dist.apple2/ac.jar -as dist.apple2/dist.po config.system sys <config
+	     java -jar dist.apple2/ac.jar -p dist.apple2/dist.po fuji.da cda <config
+#	     cp dist.apple2/dist.po ../fujinet-platformio/data/webui/device_specific/BUILD_APPLE/autorun.po
 
 clean:
 	$(call RMFILES,$(OBJECTS))
@@ -329,7 +329,6 @@ clean:
 	$(call RMFILES,$(REMOVES))
 	$(call RMFILES,$(PROGRAM))
 	$(call RMFILES,*.map)
-	rm -rf dist/
 
 else # $(words $(TARGETLIST)),1
 
@@ -341,7 +340,7 @@ endif # $(words $(TARGETLIST)),1
 OBJDIRLIST := $(wildcard $(OBJDIR)/*)
 
 zap:
-	$(foreach o,$(OBJDIRLIST),-$(call RMFILES,$o/*.o $o/*.d $o/*.lst)$(NEWLINE))
+	$(foreach o,$(OBJDIRLIST),-$(call RMFILES,$o/*.root $o/*.a $o/*.lst)$(NEWLINE))
 	$(foreach o,$(OBJDIRLIST),-$(call RMDIR,$o)$(NEWLINE))
 	-$(call RMDIR,$(OBJDIR))
 	-$(call RMFILES,$(basename $(PROGRAM)).* $(STATEFILE))

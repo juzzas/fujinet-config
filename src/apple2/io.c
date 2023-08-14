@@ -4,6 +4,7 @@
  *
  * I/O Routines
  */
+
 #include "io.h"
 #include <stdint.h>
 #include <conio.h>
@@ -48,14 +49,22 @@
 #define FUJICMD_SET_BOOT_MODE 0xD6
 #define FUJICMD_ENABLE_DEVICE 0xD5
 #define FUJICMD_DISABLE_DEVICE 0xD4
+#define FUJICMD_DEVICE_STATUS 0xD1
 #define FUJICMD_STATUS 0x53
+
+#define UNUSED(x) (void)(x);
 
 #include <string.h>
 #include "sp.h"
+#ifdef __ORCAC__
+#include <texttool.h>
+#endif
 
 static NetConfig nc;
 static SSIDInfo ssid_response;
 static AdapterConfig ac;
+
+unsigned char io_create_type;
 
 /* Test Fixtures, remove when actual I/O present */
 // static DeviceSlot _ds[8];
@@ -74,7 +83,8 @@ static AdapterConfig ac;
 
 void io_init(void)
 {
-   sp_init();
+  clrscr();
+  sp_init();
 }
 
 uint8_t io_status(void)
@@ -84,24 +94,28 @@ uint8_t io_status(void)
 
 bool io_error(void)
 {
-  return sp_error; 
+  return sp_error;
 }
 
 uint8_t io_get_wifi_status(void)
 {
   // call the SP status command and get the returned byte
 
+  unsigned long l = 0;
+
+  for (l=0;l<4096;l++);
+
   sp_error = sp_status(sp_dest, FUJICMD_GET_WIFISTATUS);
   if (sp_error)
       return 0;
- 
+
   return sp_payload[0];
 }
 
 NetConfig* io_get_ssid(void)
-{  
+{
   memset(&nc, 0, sizeof(nc));
-  sp_error = sp_status(sp_dest, FUJICMD_GET_SSID); 
+  sp_error = sp_status(sp_dest, FUJICMD_GET_SSID);
   if (!sp_error)
   {
     memcpy(&nc.ssid, sp_payload, sizeof(nc.ssid));
@@ -179,12 +193,29 @@ void io_set_ssid(NetConfig *nc)
 
 char *io_get_device_filename(uint8_t ds)
 {
-  // TODO: implement
+  sp_payload[0] = 1; // 1 byte, device slot.
+  sp_payload[1] = 0;
+  sp_payload[2] = ds; // the device slot.
+  sp_error = sp_status(sp_dest, FUJICMD_GET_DEVICE_FULLPATH);
+  if (!sp_error)
+    return (char *)&sp_payload[0];
+  else
+    return 0;
 }
 
 void io_create_new(uint8_t selected_host_slot,uint8_t selected_device_slot,unsigned long selected_size,char *path)
 {
-  // TODO: implement
+  sp_payload[0] = 0x07; // 263 bytes
+  sp_payload[1] = 0x01;
+  sp_payload[2] = selected_host_slot;
+  sp_payload[3] = selected_device_slot;
+  sp_payload[4] = io_create_type;
+  sp_payload[5] = selected_size & 0xFF;
+  sp_payload[6] = (selected_size >> 8) & 0xFF;
+  sp_payload[7] = (selected_size >> 16) & 0xFF;
+  sp_payload[8] = (selected_size >> 24) & 0xFF;
+  strncpy((char *)&sp_payload[9],path,256);
+  sp_error = sp_control(sp_dest,FUJICMD_NEW_DISK);
 }
 
 void io_get_device_slots(DeviceSlot *d)
@@ -203,7 +234,7 @@ void io_put_host_slots(HostSlot *h)
 {
   sp_payload[0] = 0;
   sp_payload[1] = 1; // 256 bytes
-  memcpy(&sp_payload[2], h, 256); 
+  memcpy(&sp_payload[2], h, 256);
   sp_error = sp_control(sp_dest, FUJICMD_WRITE_HOST_SLOTS);
 }
 
@@ -212,7 +243,7 @@ void io_put_device_slots(DeviceSlot *d)
   sp_payload[0] = 304 & 0xFF;
   sp_payload[1] = 304 >> 8;
   memcpy(&sp_payload[2],d,304);
-  
+
   sp_error = sp_control(sp_dest, FUJICMD_WRITE_DEVICE_SLOTS);
   // sleep(1);
 }
@@ -237,9 +268,9 @@ void io_open_directory(uint8_t hs, char *p, char *f)
   sp_payload[idx++] = (uint8_t)(s >> 8);
   sp_payload[idx++] = hs;
 
-  strcpy(&sp_payload[idx++], p);
+  strcpy((char *)&sp_payload[idx++], p);
   idx += strlen(p);
-  strcpy(&sp_payload[idx], f);
+  strcpy((char *)&sp_payload[idx], f);
 
   sp_error = sp_control(sp_dest, FUJICMD_OPEN_DIRECTORY);
 }
@@ -256,8 +287,8 @@ char *io_read_directory(uint8_t l, uint8_t a)
   sp_payload[0] = 0; // null string
   if (!sp_error)
     sp_error = sp_status(sp_dest, FUJICMD_READ_DIR_ENTRY);
-    
-  return sp_payload;
+
+  return (char *)sp_payload;
 }
 
 void io_close_directory(void)
@@ -281,7 +312,7 @@ void io_set_device_filename(uint8_t ds, char* e)
   sp_payload[1] = 0;
   sp_payload[2] = ds;
 
-  strcpy(&sp_payload[3],e);
+  strcpy((char *)&sp_payload[3],e);
 
   sp_error = sp_control(sp_dest, FUJICMD_SET_DEVICE_FULLPATH);
 }
@@ -302,7 +333,7 @@ void io_copy_file(unsigned char source_slot, unsigned char destination_slot)
   idx = 2;
   sp_payload[idx++] = source_slot;
   sp_payload[idx++] = destination_slot;
-  strcpy(&sp_payload[idx], copySpec);
+  strcpy((char *)&sp_payload[idx], copySpec);
 
   idx += strlen(copySpec);
   idx++;
@@ -315,11 +346,13 @@ void io_copy_file(unsigned char source_slot, unsigned char destination_slot)
 
 void io_set_boot_config(uint8_t toggle)
 {
+  #ifndef __ORCAC__
   sp_payload[0] = 1;
   sp_payload[1] = 0;
   sp_payload[2] = toggle;
 
   sp_error = sp_control(sp_dest, FUJICMD_CONFIG_BOOT);
+  #endif
 }
 
 void io_umount_disk_image(uint8_t ds)
@@ -332,21 +365,39 @@ void io_umount_disk_image(uint8_t ds)
 
 void io_update_devices_enabled(bool *e)
 {
+  char i;
 
+  for (i=0;i<6;i++)
+    {
+      e[i]=io_get_device_enabled_status(io_device_slot_to_device(i));
+    }
 }
 
 void io_enable_device(unsigned char d)
 {
-
+  sp_payload[0] = 1;
+  sp_payload[1] = 0;
+  sp_payload[2] = d;
+  sp_error = sp_control(sp_dest,FUJICMD_ENABLE_DEVICE);
 }
 
 void io_disable_device(unsigned char d)
 {
-
+  sp_payload[0] = 1;
+  sp_payload[1] = 0;
+  sp_payload[2] = d;
+  sp_error = sp_control(sp_dest,FUJICMD_DISABLE_DEVICE);
 }
 
 bool io_get_device_enabled_status(unsigned char d)
 {
+  sp_payload[0] = 1;
+  sp_payload[1] = 0;
+  sp_payload[2] = d;
+  sp_error = sp_status(sp_dest,FUJICMD_DEVICE_STATUS);
+  if (!sp_error)
+    return (bool)sp_payload[0];
+
   return false;
 }
 
@@ -357,12 +408,38 @@ unsigned char io_device_slot_to_device(unsigned char ds)
 
 void io_boot(void)
 {
-  int i;
+  #ifdef __ORCAC__
+  sp_done();
+	#ifndef BUILD_A2CDA
+  WriteChar(0x8c);  // Clear screen
+  WriteChar(0x92);  // Set 80 col
+  WriteChar(0x86);  // Cursor on
+  TextShutDown();
+  exit(0);
+	#endif
+
+  #else
   char ostype;
+  int i;
 
   ostype = get_ostype() & 0xF0;
   clrscr();
   cprintf("BOOTING...");
+
+  if (ostype == APPLE_II ||
+    ostype == APPLE_IIPLUS ||
+    ostype == APPLE_IIE ||
+    ostype == APPLE_IIEENH)
+  {
+    // Wait for fujinet disk ii states to be ready
+    for (i = 0; i < 2000; i++)
+    {
+      if (i % 250 == 0)
+      {
+        cprintf(".");
+      }
+    }
+  }
 
   if (ostype == APPLE_IIIEM)
   {
@@ -373,24 +450,43 @@ void io_boot(void)
   }
   else  // Massive brute force hack that takes advantage of MMU quirk. Thank you xot.
   {
+    // Make the simulated 6502 RESET result in a cold start.
+    // INC $03F4
     POKE(0x100,0xEE);
     POKE(0x101,0xF4);
     POKE(0x102,0x03);
+
+    // Make sure to not get disturbed.
+    // SEI
     POKE(0x103,0x78);
+
+    // Disable Language Card (which is enabled for all cc65 programs).
+    // LDA $C082
     POKE(0x104,0xAD);
     POKE(0x105,0x82);
     POKE(0x106,0xC0);
+
+    // Simulate a 6502 RESET, additionally do it from the stack page to make the MMU
+    // see the 6502 memory access pattern which is characteristic for a 6502 RESET.
+    // JMP ($FFFC)
     POKE(0x107,0x6C);
     POKE(0x108,0xFC);
     POKE(0x109,0xFF);
 
     asm("JMP $0100");
   }
+  #endif /* __ORCAC__ */
 }
 
 bool io_get_wifi_enabled(void)
 {
-	return true;
+    return true;
+}
+
+void io_list_devs(void)
+{
+    sp_list_devs();
+    state = HOSTS_AND_DEVICES;
 }
 
 #endif /* BUILD_APPLE2 */

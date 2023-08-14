@@ -5,7 +5,7 @@
 
 #include <stdbool.h>
 #include "../typedefs.h"
-#include "fuji_typedefs.h"
+#include "../fuji_typedefs.h"
 
 #ifndef GLOBALS_H
 #define GLOBALS_H
@@ -27,6 +27,8 @@ extern char filter[32];
 extern bool create;
 extern bool dir_eof;
 extern bool quick_boot;
+extern bool backToFiles;
+extern bool backFromCopy;
 
 #endif /* GLOBALS_H */
 #endif /* BUILD_PC6001 */
